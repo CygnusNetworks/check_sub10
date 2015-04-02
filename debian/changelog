@@ -1,0 +1,5 @@
+check-sub10-e1000 (0.10+debian1) UNRELEASED; urgency=low
+
+  * Initial version
+
+ -- Dr. Torge Szczepanek <debian@cygnusnetworks.de>  Thu, 02 Apr 2015 11:42:45 +0200

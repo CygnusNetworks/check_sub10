@@ -1,0 +1,214 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import argparse
+import logging
+import nagiosplugin
+import nagiosplugin.result
+import nagiosplugin.state
+import os
+
+import sub10_e1000_snmp
+import sub10_e1000_snmp.snmpclient
+
+MIB_PATH = os.path.realpath(os.path.dirname(sub10_e1000_snmp.__file__))
+
+_log = logging.getLogger('nagiosplugin')
+
+
+class BoolContext(nagiosplugin.Context):
+	def __init__(self, name, fmt_metric='{name} is {valueunit}', result_cls=nagiosplugin.result.Result):
+		super(BoolContext, self).__init__(name, fmt_metric, result_cls)
+
+	def evaluate(self, metric, resource):
+		if metric.value:
+			return self.result_cls(nagiosplugin.state.Ok, None, metric)
+		else:
+			return self.result_cls(nagiosplugin.state.Critical, None, metric)
+
+
+class BoolContextWarning(BoolContext):
+	def evaluate(self, metric, resource):
+		if metric.value:
+			return self.result_cls(nagiosplugin.state.Ok, None, metric)
+		else:
+			return self.result_cls(nagiosplugin.state.Warn, None, metric)
+
+
+class SNMPContext(nagiosplugin.Context):
+	def evaluate(self, metric, resource):
+		if metric.value["status"]:
+			return self.result_cls(nagiosplugin.state.Ok, None, metric)
+		else:
+			return self.result_cls(nagiosplugin.state.Critical, "Unreachable - %s" % metric.value["error_indication"], metric)
+
+class LinkContext(nagiosplugin.Context):
+	def evaluate(self, metric, resource):
+		if metric.value is True:
+			return self.result_cls(nagiosplugin.state.Ok, None, metric)
+		else:
+			return self.result_cls(nagiosplugin.state.Critical, "Link is down", metric)
+
+class Sub10g(nagiosplugin.Resource):
+	def __init__(self, args):
+		self.args = args
+		sub10_e1000_snmp.snmpclient.add_mib_path(MIB_PATH)
+		self.snmpclient = None
+
+	def probe(self):
+
+		_log.debug("Probing Sub10 Systems device %s through SNMP" % self.args.host)
+		self.snmpclient = sub10_e1000_snmp.snmpclient.SnmpClient(self.args.host, sub10_e1000_snmp.snmpclient.snmp_auth_data_v2c(community=self.args.community), timeout=self.args.snmp_timeout, retries=self.args.retries)
+
+		if not self.snmpclient.alive:
+			_log.warn("Device is not reachable through SNMP with error %s" % self.snmpclient.error_status)
+			yield nagiosplugin.Metric('reachable', dict(status=self.snmpclient.alive, error_indication=self.snmpclient.error_indication, error_status=self.snmpclient.error_status, error_varbinds=self.snmpclient.error_varbinds))
+			return
+
+		_log.debug("Queried Sub10 Systems device %s through SNMP - device is reachable" % self.args.host)
+		yield nagiosplugin.Metric('reachable', dict(status=True))
+		_log.debug("Found Sysname %s and sysdescr %s", self.snmpclient.sysname, self.snmpclient.sysdescr)
+
+		if not str(self.snmpclient.sysdescr).startswith("Sub10 Systems - "):
+			raise nagiosplugin.CheckError("Device is not a Sub10 Systems device - System description is %s", self.snmpclient.sysdescr)
+
+		_log.debug("Starting SNMP polling of host %s", self.args.host)
+		data_unit_varbinds = self.snmpclient.gettable("SUB10SYSTEMS-MIB::sub10Unit")
+		data_unit = data_unit_varbinds.get_json_name()
+		if "SUB10SYSTEMS-MIB::sub10UnitLclDescription.0" in data_unit:
+			desc = data_unit["SUB10SYSTEMS-MIB::sub10UnitLclDescription.0"]
+			_log.debug("Device %s description is %s", self.args.host, desc)
+		if "SUB10SYSTEMS-MIB::sub10UnitLclUnitType.0" in data_unit:
+			unit_type = data_unit["SUB10SYSTEMS-MIB::sub10UnitLclUnitType.0"]
+			_log.debug("Device %s unit type is %s", self.args.host, unit_type)
+		if "SUB10SYSTEMS-MIB::sub10UnitLclHWSerialNumber.0" in data_unit:
+			serial = data_unit["SUB10SYSTEMS-MIB::sub10UnitLclHWSerialNumber.0"]
+			_log.debug("Device %s unit serial is %s", self.args.host, serial)
+		if "SUB10SYSTEMS-MIB::sub10UnitLclTerminalName.0" in data_unit:
+			tname = data_unit["SUB10SYSTEMS-MIB::sub10UnitLclTerminalName.0"]
+			_log.debug("Device %s terminal name is %s", self.args.host, tname)
+		if "SUB10SYSTEMS-MIB::sub10UnitLclLinkName.0" in data_unit:
+			lname = data_unit["SUB10SYSTEMS-MIB::sub10UnitLclLinkName.0"]
+			_log.debug("Device %s link name is %s", self.args.host, lname)
+		if "SUB10SYSTEMS-MIB::sub10UnitLclFirmwareVersion.0" in data_unit:
+			fwversion = data_unit["SUB10SYSTEMS-MIB::sub10UnitLclFirmwareVersion.0"]
+			_log.debug("Device %s firmware version is %s", self.args.host, fwversion)
+		if "SUB10SYSTEMS-MIB::sub10UnitLclFirmwareLoadedBank.0" in data_unit:
+			fwbank = data_unit["SUB10SYSTEMS-MIB::sub10UnitLclFirmwareLoadedBank.0"]
+			_log.debug("Device %s firmware loaded bank is %s", self.args.host, fwbank)
+		if "SUB10SYSTEMS-MIB::sub10UnitLclMWUTemperature.0" in data_unit:
+			modem_temp = data_unit["SUB10SYSTEMS-MIB::sub10UnitLclMWUTemperature.0"]
+			_log.debug("Device %s mode temperature is %s", self.args.host, modem_temp)
+			yield nagiosplugin.Metric('modem_temp', modem_temp)
+		if "SUB10SYSTEMS-MIB::sub10UnitLclNTPSyncStatus.0" in data_unit:
+			ntp_sync_status = data_unit["SUB10SYSTEMS-MIB::sub10UnitLclNTPSyncStatus.0"]
+			_log.debug("Device %s ntp sync status is %s", self.args.host, ntp_sync_status)
+		if "SUB10SYSTEMS-MIB::sub10UnitLclRadioDataRate.0" in data_unit:
+			radio_data_rate = data_unit["SUB10SYSTEMS-MIB::sub10UnitLclRadioDataRate.0"]  # 0 = GBit, 1 = 700 MBit, 2= 500 MBit, 3= 300 Mbit, 4=100 Mbit
+			_log.debug("Device %s radio data rate is %s", self.args.host, radio_data_rate)
+
+		data_mgt_varbinds = self.snmpclient.gettable("SUB10SYSTEMS-MIB::sub10UnitMgmt")
+		data_mgt = data_mgt_varbinds.get_json_name()
+
+		if "SUB10SYSTEMS-MIB::sub10UnitMgmtTimeNTPEnabled.0" in data_mgt:
+			ntp_enabled = data_mgt["SUB10SYSTEMS-MIB::sub10UnitMgmtTimeNTPEnabled.0"]
+			_log.debug("Device %s ntp enabled status is %s", self.args.host, ntp_enabled)
+			if ntp_enabled == 1:
+				yield nagiosplugin.Metric('ntp_sync', ntp_sync_status==1)
+		if "SUB10SYSTEMS-MIB::sub10UnitMgmtEncryptMode.0" in data_mgt:
+			enc_mode = data_mgt["SUB10SYSTEMS-MIB::sub10UnitMgmtEncryptMode.0"]
+			_log.debug("Device %s encryption mode is %s", self.args.host, enc_mode)
+			if self.args.encryption:
+				yield nagiosplugin.Metric('encryption', enc_mode)
+		if "SUB10SYSTEMS-MIB::sub10UnitMgmtLicenseAES.0" in data_mgt:
+			aes_lic = data_mgt["SUB10SYSTEMS-MIB::sub10UnitMgmtLicenseAES.0"]
+			_log.debug("Device %s license aes state is %s", self.args.host, aes_lic)
+
+		# for i in range(1, 5):
+		# 	alarm_state = data_unit["SUB10SYSTEMS-MIB::sub10UnitLclAlarmState.%i" % i]
+		# 	if alarm_state == 1:
+		# 		alarm_time = data_unit["SUB10SYSTEMS-MIB::sub10UnitLclAlarmStateTime.%i" % i]
+		# 		# 1 = critical, 2= major, 3= minor, 4 = warning
+		# 		print "alarm state is 1"
+		# 		if "SUB10SYSTEMS-MIB::sub10UnitMgtAlarmName.%i" %i in data_mgt:
+		# 			alarm_name = data_mgt["SUB10SYSTEMS-MIB::sub10UnitMgtAlarmName.%i" % i]
+		# 			print "alarm name is", alarm_name
+
+		radio_local_varbinds = self.snmpclient.gettable("SUB10SYSTEMS-MIB::sub10RadioLocalStatus")
+		radio_local = radio_local_varbinds.get_json_name()
+
+		link_status = radio_local["SUB10SYSTEMS-MIB::sub10RadioLclLinkStatus.0"]
+		_log.debug("Device %s link status is %s", self.args.host, link_status)
+		yield nagiosplugin.Metric('link_status', link_status==1)
+
+		tx_power = radio_local["SUB10SYSTEMS-MIB::sub10RadioLclTxPower.0"]
+		yield nagiosplugin.Metric('tx_power', float(tx_power))
+		_log.debug("Device %s tx power is %s", self.args.host, tx_power)
+
+		rx_power = radio_local["SUB10SYSTEMS-MIB::sub10RadioLclRxPower.0"]
+		yield nagiosplugin.Metric('rx_power', float(rx_power))
+		_log.debug("Device %s rx power is %s", self.args.host, rx_power)
+
+		vect_err = radio_local["SUB10SYSTEMS-MIB::sub10RadioLclVectErr.0"]
+		yield nagiosplugin.Metric('vect_err', float(vect_err))
+		_log.debug("Device %s vector error is %s", self.args.host, vect_err)
+
+		link_loss = radio_local["SUB10SYSTEMS-MIB::sub10RadioLclLnkLoss.0"]
+		yield nagiosplugin.Metric('link_loss', float(link_loss))
+		_log.debug("Device %s link_loss is %s", self.args.host, link_loss)
+
+		align_mode = radio_local["SUB10SYSTEMS-MIB::sub10RadioLclAlignmentMode.0"]
+		_log.debug("Device %s alignment mode is %s", self.args.host, align_mode)
+
+		data_rate = radio_local["SUB10SYSTEMS-MIB::sub10RadioLclDataRate.0"]
+		_log.debug("Device %s data rate is %s", self.args.host, data_rate)
+
+		if data_rate == 0:
+			rate = 1000
+		elif data_rate == 1:
+			rate = 700
+		elif data_rate == 2:
+			rate = 500
+		elif data_rate == 3:
+			rate = 300
+		elif data_rate == 4:
+			rate = 100
+		else:
+			raise nagiosplugin.CheckError("Unknown data rate received on OID SUB10SYSTEMS-MIB::sub10RadioLclDataRate with value %i" % data_rate)
+
+		yield nagiosplugin.Metric('data_rate', rate)
+
+
+@nagiosplugin.guarded
+def main():
+	argp = argparse.ArgumentParser()
+	argp.add_argument('-v', '--verbose', action='count', default=0)
+	argp.add_argument('-C', '--community', help='SNMP Community', default='public')
+	argp.add_argument('-H', '--host', help='Hostname or network address to check', required=True)
+	argp.add_argument('-t', '--timeout', help='Check timeout', type=int, default=30)
+	argp.add_argument('-s', '--snmp-timeout', help='SNMP timeout', dest='snmp_timeout', type=int, default=2)
+	argp.add_argument('-r', '--retries', help='SNMP retries', type=int, default=3)
+	argp.add_argument('-e', '--encryption', help='Check for encryption', action='store_true')
+	argp.add_argument('--rate', help='check radio rate for fixed MBit value. Possible values 1000, 700, 500, 300, 100', type=int, default=1000, choices=[100, 300, 500, 700, 1000])
+	args = argp.parse_args()
+
+	check = nagiosplugin.Check(Sub10g(args))
+	check.add(SNMPContext('reachable'))
+	check.add(BoolContextWarning('ntp_sync'))
+	check.add(LinkContext('link_status'))
+
+	# FIXME: add configfile to override default ranges
+	check.add(nagiosplugin.ScalarContext('modem_temp', warning='-30:45', critical='-40:55'))
+
+	check.add(nagiosplugin.ScalarContext('tx_power'))
+	check.add(nagiosplugin.ScalarContext('rx_power', warning='-55:0', critical='-60:0'))
+
+	check.add(nagiosplugin.ScalarContext('vect_err', warning='-20:0', critical='-25:0'))
+	check.add(nagiosplugin.ScalarContext('link_loss', warning='-20:0', critical='-40:0'))
+	check.add(nagiosplugin.ScalarContext('data_rate', warning='%i:%i' % (args.rate, args.rate)))
+
+
+	check.main(args.verbose, timeout=args.timeout)
+
+if __name__ == "__main__":
+	main()
