@@ -7,7 +7,6 @@ import nagiosplugin
 import nagiosplugin.result
 import nagiosplugin.state
 import os
-import sys
 
 import sub10_e1000_snmp
 import sub10_e1000_snmp.snmpclient
@@ -17,8 +16,8 @@ MIB_PATH = os.path.realpath(os.path.dirname(sub10_e1000_snmp.__file__))
 _log = logging.getLogger('nagiosplugin')
 
 
-class BoolContext(nagiosplugin.Context):
-	def __init__(self, name, ok_text=None, crit_text=None, fmt_metric='{name} is {valueunit}', result_cls=nagiosplugin.result.Result):
+class BoolContext(nagiosplugin.Context):  # pylint: disable=too-few-public-methods
+	def __init__(self, name, ok_text=None, crit_text=None, fmt_metric='{name} is {valueunit}', result_cls=nagiosplugin.result.Result):  # pylint: disable=too-many-arguments
 		self.ok_text = ok_text
 		self.crit_text = crit_text
 		super(BoolContext, self).__init__(name, fmt_metric, result_cls)
@@ -30,8 +29,8 @@ class BoolContext(nagiosplugin.Context):
 			return self.result_cls(nagiosplugin.state.Critical, self.crit_text, metric)
 
 
-class BoolContextWarning(BoolContext):
-	def __init__(self, name, ok_text=None, warn_text=None, fmt_metric='{name} is {valueunit}', result_cls=nagiosplugin.result.Result):
+class BoolContextWarning(BoolContext):  # pylint: disable=too-few-public-methods
+	def __init__(self, name, ok_text=None, warn_text=None, fmt_metric='{name} is {valueunit}', result_cls=nagiosplugin.result.Result):  # pylint: disable=too-many-arguments
 		self.ok_text = ok_text
 		self.warn_text = warn_text
 		super(BoolContextWarning, self).__init__(name, fmt_metric, result_cls)
@@ -43,7 +42,7 @@ class BoolContextWarning(BoolContext):
 			return self.result_cls(nagiosplugin.state.Warn, self.warn_text, metric)
 
 
-class SNMPContext(nagiosplugin.Context):
+class SNMPContext(nagiosplugin.Context):  # pylint: disable=too-few-public-methods
 	def evaluate(self, metric, resource):
 		if metric.value["status"]:
 			return self.result_cls(nagiosplugin.state.Ok, None, metric)
@@ -51,23 +50,23 @@ class SNMPContext(nagiosplugin.Context):
 			return self.result_cls(nagiosplugin.state.Critical, "Unreachable - %s" % metric.value["error_indication"], metric)
 
 
-class Sub10g(nagiosplugin.Resource):
+class Sub10g(nagiosplugin.Resource):  # pylint: disable=too-few-public-methods
 	def __init__(self, args):
 		self.args = args
 		sub10_e1000_snmp.snmpclient.add_mib_path(MIB_PATH)
 		self.snmpclient = None
 
-	def probe(self):
+	def probe(self):  # pylint: disable=too-many-locals
 
-		_log.debug("Probing Sub10 Systems device %s through SNMP" % self.args.host)
+		_log.debug("Probing Sub10 Systems device %s through SNMP", self.args.host)
 		self.snmpclient = sub10_e1000_snmp.snmpclient.SnmpClient(self.args.host, sub10_e1000_snmp.snmpclient.snmp_auth_data_v2c(community=self.args.community), timeout=self.args.snmp_timeout, retries=self.args.retries)
 
 		if not self.snmpclient.alive:
-			_log.warn("Device is not reachable through SNMP with error %s" % self.snmpclient.error_status)
+			_log.warn("Device is not reachable through SNMP with error %s", self.snmpclient.error_status)
 			yield nagiosplugin.Metric('reachable', dict(status=self.snmpclient.alive, error_indication=self.snmpclient.error_indication, error_status=self.snmpclient.error_status, error_varbinds=self.snmpclient.error_varbinds))
 			return
 
-		_log.debug("Queried Sub10 Systems device %s through SNMP - device is reachable" % self.args.host)
+		_log.debug("Queried Sub10 Systems device %s through SNMP - device is reachable", self.args.host)
 		yield nagiosplugin.Metric('reachable', dict(status=True))
 		_log.debug("Found Sysname %s and sysdescr %s", self.snmpclient.sysname, self.snmpclient.sysdescr)
 
@@ -78,7 +77,7 @@ class Sub10g(nagiosplugin.Resource):
 
 		sysuptime = self.snmpclient.get("SNMPv2-MIB::sysUpTime.0")
 
-		yield nagiosplugin.Metric("sysuptime", int(sysuptime.get_value()/100/60))
+		yield nagiosplugin.Metric("sysuptime", int(sysuptime.get_value() / 100 / 60))
 
 		data_unit_varbinds = self.snmpclient.gettable("SUB10SYSTEMS-MIB::sub10Unit")
 		data_unit = data_unit_varbinds.get_json_name()
@@ -114,7 +113,6 @@ class Sub10g(nagiosplugin.Resource):
 			radio_data_rate = data_unit["SUB10SYSTEMS-MIB::sub10UnitLclRadioDataRate.0"]  # 0 = GBit, 1 = 700 MBit, 2= 500 MBit, 3= 300 Mbit, 4=100 Mbit
 			_log.debug("Device %s radio data rate is %s", self.args.host, radio_data_rate)
 
-
 		data_mgt_varbinds = self.snmpclient.gettable("SUB10SYSTEMS-MIB::sub10UnitMgmt")
 		data_mgt = data_mgt_varbinds.get_json_name()
 
@@ -122,7 +120,7 @@ class Sub10g(nagiosplugin.Resource):
 			ntp_enabled = data_mgt["SUB10SYSTEMS-MIB::sub10UnitMgmtTimeNTPEnabled.0"]
 			_log.debug("Device %s ntp enabled status is %s", self.args.host, ntp_enabled)
 			if ntp_enabled == 1:
-				yield nagiosplugin.Metric('ntp_sync', ntp_sync_status==1)
+				yield nagiosplugin.Metric('ntp_sync', ntp_sync_status == 1)
 		if "SUB10SYSTEMS-MIB::sub10UnitMgmtEncryptMode.0" in data_mgt:
 			enc_mode = data_mgt["SUB10SYSTEMS-MIB::sub10UnitMgmtEncryptMode.0"]
 			_log.debug("Device %s encryption mode is %s", self.args.host, enc_mode)
@@ -138,30 +136,19 @@ class Sub10g(nagiosplugin.Resource):
 		_log.debug("Device %s modulation is %s", self.args.host, modulation)
 
 		if self.args.modulation is not None:
-			if self.args.modulation=="8psk":
-				modulation_forced=2
+			if self.args.modulation == "8psk":
+				modulation_forced = 2
 			else:
-				modulation_forced=1
+				modulation_forced = 1
 
-			yield nagiosplugin.Metric('modulation', modulation==modulation_forced)
-
-
-		# for i in range(1, 5):
-		# 	alarm_state = data_unit["SUB10SYSTEMS-MIB::sub10UnitLclAlarmState.%i" % i]
-		# 	if alarm_state == 1:
-		# 		alarm_time = data_unit["SUB10SYSTEMS-MIB::sub10UnitLclAlarmStateTime.%i" % i]
-		# 		# 1 = critical, 2= major, 3= minor, 4 = warning
-		# 		print "alarm state is 1"
-		# 		if "SUB10SYSTEMS-MIB::sub10UnitMgtAlarmName.%i" %i in data_mgt:
-		# 			alarm_name = data_mgt["SUB10SYSTEMS-MIB::sub10UnitMgtAlarmName.%i" % i]
-		# 			print "alarm name is", alarm_name
+			yield nagiosplugin.Metric('modulation', modulation == modulation_forced)
 
 		radio_local_varbinds = self.snmpclient.gettable("SUB10SYSTEMS-MIB::sub10RadioLocalStatus")
 		radio_local = radio_local_varbinds.get_json_name()
 
 		link_status = radio_local["SUB10SYSTEMS-MIB::sub10RadioLclLinkStatus.0"]
 		_log.debug("Device %s link status is %s", self.args.host, link_status)
-		yield nagiosplugin.Metric('link_status', link_status==1)
+		yield nagiosplugin.Metric('link_status', link_status == 1)
 
 		tx_power = radio_local["SUB10SYSTEMS-MIB::sub10RadioLclTxPower.0"]
 		yield nagiosplugin.Metric('tx_power', float(tx_power))
@@ -181,7 +168,7 @@ class Sub10g(nagiosplugin.Resource):
 
 		align_mode = radio_local["SUB10SYSTEMS-MIB::sub10RadioLclAlignmentMode.0"]
 		_log.debug("Device %s alignment mode is %s", self.args.host, align_mode)
-		yield nagiosplugin.Metric('align_mode', align_mode==0)
+		yield nagiosplugin.Metric('align_mode', align_mode == 0)
 
 		data_rate = radio_local["SUB10SYSTEMS-MIB::sub10RadioLclDataRate.0"]
 		_log.debug("Device %s data rate is %s", self.args.host, data_rate)
