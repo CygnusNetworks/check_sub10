@@ -18,9 +18,9 @@ $def[1] .= rrd::gprint("rx_power", "MAX", "Max %5.1lf db");
 $def[1] .= rrd::gprint("rx_power", "LAST", "Last %5.1lf db\\n");
 
 $def[1] .= rrd::gradient("tx_power", "f0f0f0", "0000b0","TX Power");
-$def[1] .= rrd::gprint("tx_power", "AVERAGE", "Average %5.1lf db");
-$def[1] .= rrd::gprint("tx_power", "MAX", "Max %5.1lf db");
-$def[1] .= rrd::gprint("tx_power", "LAST", "Last %5.1lf db\\n");
+$def[1] .= rrd::gprint("tx_power", "AVERAGE", "Average %5lf db");
+$def[1] .= rrd::gprint("tx_power", "MAX", "Max %5lf db");
+$def[1] .= rrd::gprint("tx_power", "LAST", "Last %5lf db\\n");
 
 $def[1] .= rrd::line3("vect_err", "#9121db", "Vect Err");
 $def[1] .= rrd::gprint("vect_err", "AVERAGE", "Average %5.1lf db");
