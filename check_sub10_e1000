@@ -18,22 +18,29 @@ _log = logging.getLogger('nagiosplugin')
 
 
 class BoolContext(nagiosplugin.Context):
-	def __init__(self, name, fmt_metric='{name} is {valueunit}', result_cls=nagiosplugin.result.Result):
+	def __init__(self, name, ok_text=None, crit_text=None, fmt_metric='{name} is {valueunit}', result_cls=nagiosplugin.result.Result):
+		self.ok_text = ok_text
+		self.crit_text = crit_text
 		super(BoolContext, self).__init__(name, fmt_metric, result_cls)
 
 	def evaluate(self, metric, resource):
 		if metric.value:
-			return self.result_cls(nagiosplugin.state.Ok, None, metric)
+			return self.result_cls(nagiosplugin.state.Ok, self.ok_text, metric)
 		else:
-			return self.result_cls(nagiosplugin.state.Critical, None, metric)
+			return self.result_cls(nagiosplugin.state.Critical, self.crit_text, metric)
 
 
 class BoolContextWarning(BoolContext):
+	def __init__(self, name, ok_text=None, warn_text=None, fmt_metric='{name} is {valueunit}', result_cls=nagiosplugin.result.Result):
+		self.ok_text = ok_text
+		self.warn_text = warn_text
+		super(BoolContextWarning, self).__init__(name, fmt_metric, result_cls)
+
 	def evaluate(self, metric, resource):
 		if metric.value:
-			return self.result_cls(nagiosplugin.state.Ok, None, metric)
+			return self.result_cls(nagiosplugin.state.Ok, self.ok_text, metric)
 		else:
-			return self.result_cls(nagiosplugin.state.Warn, None, metric)
+			return self.result_cls(nagiosplugin.state.Warn, self.warn_text, metric)
 
 
 class SNMPContext(nagiosplugin.Context):
@@ -43,12 +50,6 @@ class SNMPContext(nagiosplugin.Context):
 		else:
 			return self.result_cls(nagiosplugin.state.Critical, "Unreachable - %s" % metric.value["error_indication"], metric)
 
-class LinkContext(nagiosplugin.Context):
-	def evaluate(self, metric, resource):
-		if metric.value is True:
-			return self.result_cls(nagiosplugin.state.Ok, None, metric)
-		else:
-			return self.result_cls(nagiosplugin.state.Critical, "Link is down", metric)
 
 class Sub10g(nagiosplugin.Resource):
 	def __init__(self, args):
@@ -113,6 +114,7 @@ class Sub10g(nagiosplugin.Resource):
 			radio_data_rate = data_unit["SUB10SYSTEMS-MIB::sub10UnitLclRadioDataRate.0"]  # 0 = GBit, 1 = 700 MBit, 2= 500 MBit, 3= 300 Mbit, 4=100 Mbit
 			_log.debug("Device %s radio data rate is %s", self.args.host, radio_data_rate)
 
+
 		data_mgt_varbinds = self.snmpclient.gettable("SUB10SYSTEMS-MIB::sub10UnitMgmt")
 		data_mgt = data_mgt_varbinds.get_json_name()
 
@@ -129,6 +131,20 @@ class Sub10g(nagiosplugin.Resource):
 		if "SUB10SYSTEMS-MIB::sub10UnitMgmtLicenseAES.0" in data_mgt:
 			aes_lic = data_mgt["SUB10SYSTEMS-MIB::sub10UnitMgmtLicenseAES.0"]
 			_log.debug("Device %s license aes state is %s", self.args.host, aes_lic)
+
+		radio_mgt_varbinds = self.snmpclient.gettable("SUB10SYSTEMS-MIB::sub10RadioMgmt")
+		radio_mgt = radio_mgt_varbinds.get_json_name()
+		modulation = radio_mgt["SUB10SYSTEMS-MIB::sub10RadioMgmtModulationMode.0"]
+		_log.debug("Device %s modulation is %s", self.args.host, modulation)
+
+		if self.args.modulation is not None:
+			if self.args.modulation=="8psk":
+				modulation_forced=2
+			else:
+				modulation_forced=1
+
+			yield nagiosplugin.Metric('modulation', modulation==modulation_forced)
+
 
 		# for i in range(1, 5):
 		# 	alarm_state = data_unit["SUB10SYSTEMS-MIB::sub10UnitLclAlarmState.%i" % i]
@@ -165,6 +181,7 @@ class Sub10g(nagiosplugin.Resource):
 
 		align_mode = radio_local["SUB10SYSTEMS-MIB::sub10RadioLclAlignmentMode.0"]
 		_log.debug("Device %s alignment mode is %s", self.args.host, align_mode)
+		yield nagiosplugin.Metric('align_mode', align_mode==0)
 
 		data_rate = radio_local["SUB10SYSTEMS-MIB::sub10RadioLclDataRate.0"]
 		_log.debug("Device %s data rate is %s", self.args.host, data_rate)
@@ -196,13 +213,17 @@ def main():
 	argp.add_argument('-r', '--retries', help='SNMP retries', type=int, default=3)
 	argp.add_argument('-e', '--encryption', help='Check for encryption', action='store_true')
 	argp.add_argument('-u', '--uptime', help='Update limit in minutes to create warning', type=int, default=120)
+	argp.add_argument('-m', '--modulation', help='Force checking of modulation', default=None, choices=["qpsk", "8psk"])
 	argp.add_argument('--rate', help='check radio rate for fixed MBit value. Possible values 1000, 700, 500, 300, 100', type=int, default=1000, choices=[100, 300, 500, 700, 1000])
 	args = argp.parse_args()
 
 	check = nagiosplugin.Check(Sub10g(args))
 	check.add(SNMPContext('reachable'))
-	check.add(BoolContextWarning('ntp_sync'))
-	check.add(LinkContext('link_status'))
+	check.add(BoolContextWarning('ntp_sync', warn_text="NTP is not in sync"))
+	check.add(BoolContextWarning('align_mode', warn_text="Alignment mode is on"))
+	check.add(BoolContext('link_status', crit_text="Link is down"))
+	if args.modulation is not None:
+		check.add(BoolContextWarning('modulation', warn_text="Modulation is not forced modulation %s" % args.modulation))
 
 	# FIXME: add configfile to override default ranges
 	check.add(nagiosplugin.ScalarContext('modem_temp', warning='-30:45', critical='-40:55'))
