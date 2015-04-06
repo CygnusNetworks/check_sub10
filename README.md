@@ -53,12 +53,12 @@ define command {
 	command_line	/usr/share/nagios3/plugins/eventhandlers/reboot_sub10_e1000 -H FIXME -C private $HOSTSTATE$ $HOSTSTATETYPE$ $HOSTATTEMPT$
 }
 define host{
-        use             		generic-host
-        host_name       		some-child-host
-        parents         		sub10-device
-        address         		FIXME
-        event_handler_enabled           1
-        event_handler   		reboot_sub10_e1000_sub10-device
+        us				generic-host
+        host_name			some-child-host
+        parents				sub10-device
+        address				FIXME
+        event_handler_enabled		1
+        event_handler			reboot_sub10_e1000_sub10-device
 }
 
 ```
