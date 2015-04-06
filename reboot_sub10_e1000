@@ -1,0 +1,72 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import argparse
+import logging
+import logging.handlers
+import os
+import platform
+import sys
+
+from pysnmp.proto import rfc1902
+
+import sub10_e1000_snmp
+import sub10_e1000_snmp.snmpclient
+
+MIB_PATH = os.path.realpath(os.path.dirname(sub10_e1000_snmp.__file__))
+
+
+def get_log_address():
+	if platform.system() == "Linux":
+		log_address = "/dev/log"
+	elif platform.system() == "Darwin":
+		log_address = "/var/run/syslog"
+	else:
+		raise RuntimeError("platform.system() %s is not defined" % platform.system())
+	return log_address
+
+_log = logging.getLogger('reboot_sub10_e1000')
+_log.setLevel(logging.DEBUG)
+handler = logging.handlers.SysLogHandler(address=get_log_address())
+_log.addHandler(handler)
+
+
+def main():
+	argp = argparse.ArgumentParser()
+	argp.add_argument('-v', '--verbose', action='count', default=0)
+	argp.add_argument('-C', '--community', help='SNMP private Community', default='private')
+
+	argp.add_argument('-s', '--snmp-timeout', help='SNMP timeout', dest='snmp_timeout', type=int, default=1)
+	argp.add_argument('-r', '--retries', help='SNMP retries', type=int, default=1)
+	argp.add_argument('-H', '--host', help='Hostname or network address to check', required=True)
+	argp.add_argument('hoststate', nargs=1, help='Nagios host state')
+	argp.add_argument('hoststatetype', nargs=1, help='Nagios host state type')
+	argp.add_argument('hostattempt', nargs=1, help='Nagios host attempt')
+	args = argp.parse_args()
+
+	sub10_e1000_snmp.snmpclient.add_mib_path(MIB_PATH)
+	snmpclient = sub10_e1000_snmp.snmpclient.SnmpClient(args.host, sub10_e1000_snmp.snmpclient.snmp_auth_data_v2c(community=args.community), timeout=args.snmp_timeout, retries=args.retries)
+
+	if not snmpclient.alive:
+		_log.error("sub10 device %s is not alive", args.host)
+		print ("sub10 device %s cannot be reached through SNMP", args.host)
+		sys.exit(1)
+	_log.debug("sub10 device %s is alive", args.host)
+
+	hoststate = args.hoststate[0]
+	hoststatetype = args.hoststatetype[0]
+	# hostattempt = args.hostattempt[0]
+
+	if hoststate == "DOWN" and hoststatetype == "HARD":
+		_log.info("sub10 device %s executing reset through sub10UnitMgmtFirmwareAction", args.host)
+		# device does not return any value but reboots immediately
+		try:
+			snmpclient.set(('SUB10SYSTEMS-MIB::sub10UnitMgmtFirmwareAction.0', rfc1902.Integer(2)))
+		except:  # pylint:disable=bare-except
+			pass
+		_log.info("sub10 device %s reset done", args.host)
+	else:
+		_log.debug("Device state is %s and statetype %s - not executing reset", hoststate, hoststatetype)
+
+if __name__ == "__main__":
+	main()
