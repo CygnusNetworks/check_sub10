@@ -32,6 +32,7 @@ _log.addHandler(handler)
 
 
 def main():
+	_log.info("reboot_sub10_e1000 started")
 	argp = argparse.ArgumentParser()
 	argp.add_argument('-v', '--verbose', action='count', default=0)
 	argp.add_argument('-C', '--community', help='SNMP private Community', default='private')
