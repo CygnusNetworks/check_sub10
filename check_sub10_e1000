@@ -213,7 +213,7 @@ def main():
 		check.add(BoolContextWarning('modulation', warn_text="Modulation is not forced modulation %s" % args.modulation))
 
 	# FIXME: add configfile to override default ranges
-	check.add(nagiosplugin.ScalarContext('modem_temp', warning='-30:45', critical='-40:55'))
+	check.add(nagiosplugin.ScalarContext('modem_temp', warning='-30:65', critical='-40:85'))
 
 	check.add(nagiosplugin.ScalarContext('tx_power'))
 	check.add(nagiosplugin.ScalarContext('rx_power', warning='-55:0', critical='-60:0'))
