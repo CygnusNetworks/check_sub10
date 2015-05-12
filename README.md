@@ -60,11 +60,11 @@ Define the commands for Nagios checks and include it in the service definitions:
 
 ```
 define command {
-        command_name    check_sub10
-        command_line    /usr/lib/nagios/plugins/check_sub10 -C $ARG1$ -H $HOSTADDRESS$
+	command_name	check_sub10
+	command_line	/usr/lib/nagios/plugins/check_sub10 -C $ARG1$ -H $HOSTADDRESS$
 }
 define service {
-	use			generic-service-perfdata
+	use					generic-service-perfdata
 	hostgroup_name		sub10g
 	service_description	check_sub10
 	check_command		check_sub10!SNMP_COMMUNITY
@@ -79,12 +79,12 @@ define command {
 	command_line	/usr/share/nagios3/plugins/eventhandlers/reboot_sub10 -H FIXME -C private $HOSTSTATE$ $HOSTSTATETYPE$ $HOSTATTEMPT$
 }
 define host{
-        us				generic-host
-        host_name			some-child-host
-        parents				sub10-device
-        address				FIXME
-        event_handler_enabled		1
-        event_handler			reboot_sub10_sub10-device
+	use						generic-host
+	host_name				some-child-host
+	parents					sub10-device
+	address					FIXME
+	event_handler_enabled	1
+	event_handler			reboot_sub10_sub10-device
 }
 
 ```
