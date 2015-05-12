@@ -13,6 +13,11 @@ ln -s /usr/bin/check_sub10 /usr/lib/nagios/plugins/check_sub10
 ln -s reboot_sub10 /usr/share/nagios3/plugins/eventhandlers/reboot_sub10
 ```
 
+### Installation Debian package
+
+For Debian you can use the provided Debian package. For Debian Wheezy you will need python-configparser from Backports. Debian Jessie should be fine without any additional packages.
+
+
 ### Usage example
 
 Nagios Plugin called manually:
