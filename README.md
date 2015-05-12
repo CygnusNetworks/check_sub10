@@ -28,6 +28,32 @@ Reboot event handler script called manually:
 ./reboot_sub10 -H 1.2.3.4 -C private DOWN HARD 1
 ```
 
+### Using a config file
+
+You can use a config file to change ranges of the warning and critical value ranges for the different monitored devices. The config is expected to be named /etc/check_sub10.conf.
+Use the command line Switch --config (-c) to override this behaviour.
+
+The config file must contain sections named after the specified hostname/hostaddress of the device (parameter -H) of the check_sub10 call. You can list the changed parameters within this section. Non present value will take over the defaults. Example (all values are the default values):
+
+/etc/check_sub10.conf
+```
+[10.0.0.1]
+modem_temp_min_warn = -30
+modem_temp_min_crit = -40
+modem_temp_min_warn = 65
+modem_temp_min_crit = 85
+
+rx_power_min_warn = -55
+rx_power_min_crit = -60
+
+vect_err_min_warn = -20
+vect_err_min_warn = -40
+
+link_loss_min_warn = -20
+link_loss_min_crit = -40
+```
+
+
 ### Nagios Integration
 
 Define the commands for Nagios checks and include it in the service definitions:
