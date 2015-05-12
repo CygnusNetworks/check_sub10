@@ -58,7 +58,7 @@ class Sub10g(nagiosplugin.Resource):  # pylint: disable=too-few-public-methods
 		self.snmpclient = None
 
 	def probe(self):  # pylint: disable=too-many-locals
-
+		ntp_sync_status = None
 		_log.debug("Probing Sub10 Systems device %s through SNMP", self.args.host)
 		self.snmpclient = sub10_snmp.snmpclient.SnmpClient(self.args.host, sub10_snmp.snmpclient.snmp_auth_data_v2c(community=self.args.community), timeout=self.args.snmp_timeout, retries=self.args.retries)
 
@@ -211,10 +211,10 @@ def main():
 		rx_power_min_warn=-55, rx_power_min_crit=-60,
 		vect_err_min_warn=-20, vect_err_min_crit=-40,
 		link_loss_min_warn=-20, link_loss_min_crit=-40,
-   )
-	config_defaults = { 'general': {}, args.host: device_defaults }
+	)
+	config_defaults = {'general': {}, args.host: device_defaults}
 
-	config_parser = configparser.SafeConfigParser(config_defaults)
+	config_parser = configparser.ConfigParser(config_defaults)
 	config_parser.read(args.config)
 
 	if args.host not in config_parser.sections():
