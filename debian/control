@@ -7,6 +7,7 @@ Standards-Version: 3.9.6
 
 Package: check-sub10
 Replaces: check-sub10-e1000
+Conflicts: check-sub10-e1000
 Architecture: all
 Depends: ${misc:Depends}, ${python:Depends}
 Description: Sub10 Liberator Nagios check
