@@ -1,3 +1,10 @@
+check-sub10 (0.20+debian1) UNRELEASED; urgency=low
+
+  * Add config file support
+  * Rename to check-sub10
+
+ -- Dr. Torge Szczepanek <debian@cygnusnetworks.de>  Tue, 12 May 2015 11:15:51 +0200
+
 check-sub10-e1000 (0.10+debian1) UNRELEASED; urgency=low
 
   * Initial version

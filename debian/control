@@ -1,13 +1,14 @@
-Source: check-sub10-e1000
+Source: check-sub10
 Section: python
 Priority: optional
 Maintainer: Dr. Torge Szczepanek <debian@cygnusnetworks.de>
 Build-Depends: debhelper (>= 9), python-all, python-setuptools
 Standards-Version: 3.9.6
 
-Package: check-sub10-e1000
+Package: check-sub10
+Replaces: check-sub10-e1000
 Architecture: all
 Depends: ${misc:Depends}, ${python:Depends}
-Description: Sub10 Liberator E1000 Nagios check
- Nagios/Icinga Plugin for Sub10 Systems Liberator E1000
+Description: Sub10 Liberator Nagios check
+ Nagios/Icinga Plugin for Sub10 Systems Liberator devices
  products using SNMP to query the device.

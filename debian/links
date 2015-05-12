@@ -1,2 +1,2 @@
-/usr/bin/check_sub10_e1000 /usr/lib/nagios/plugins/check_sub10_e1000
-/usr/bin/reboot_sub10_e1000 /usr/share/nagios3/plugins/eventhandlers/reboot_sub10_e1000
+/usr/bin/check_sub10 /usr/lib/nagios/plugins/check_sub10
+/usr/bin/reboot_sub10 /usr/share/nagios3/plugins/eventhandlers/reboot_sub10

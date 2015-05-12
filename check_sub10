@@ -2,16 +2,17 @@
 # -*- coding: utf-8 -*-
 
 import argparse
+import configparser
 import logging
 import nagiosplugin
 import nagiosplugin.result
 import nagiosplugin.state
 import os
 
-import sub10_e1000_snmp
-import sub10_e1000_snmp.snmpclient
+import sub10_snmp
+import sub10_snmp.snmpclient
 
-MIB_PATH = os.path.realpath(os.path.dirname(sub10_e1000_snmp.__file__))
+MIB_PATH = os.path.realpath(os.path.dirname(sub10_snmp.__file__))
 
 _log = logging.getLogger('nagiosplugin')
 
@@ -53,13 +54,13 @@ class SNMPContext(nagiosplugin.Context):  # pylint: disable=too-few-public-metho
 class Sub10g(nagiosplugin.Resource):  # pylint: disable=too-few-public-methods
 	def __init__(self, args):
 		self.args = args
-		sub10_e1000_snmp.snmpclient.add_mib_path(MIB_PATH)
+		sub10_snmp.snmpclient.add_mib_path(MIB_PATH)
 		self.snmpclient = None
 
 	def probe(self):  # pylint: disable=too-many-locals
 
 		_log.debug("Probing Sub10 Systems device %s through SNMP", self.args.host)
-		self.snmpclient = sub10_e1000_snmp.snmpclient.SnmpClient(self.args.host, sub10_e1000_snmp.snmpclient.snmp_auth_data_v2c(community=self.args.community), timeout=self.args.snmp_timeout, retries=self.args.retries)
+		self.snmpclient = sub10_snmp.snmpclient.SnmpClient(self.args.host, sub10_snmp.snmpclient.snmp_auth_data_v2c(community=self.args.community), timeout=self.args.snmp_timeout, retries=self.args.retries)
 
 		if not self.snmpclient.alive:
 			_log.warn("Device is not reachable through SNMP with error %s", self.snmpclient.error_status)
@@ -193,6 +194,7 @@ class Sub10g(nagiosplugin.Resource):  # pylint: disable=too-few-public-methods
 def main():
 	argp = argparse.ArgumentParser()
 	argp.add_argument('-v', '--verbose', action='count', default=0)
+	argp.add_argument('-c', '--config', help='config file', default='/etc/check_sub10.conf')
 	argp.add_argument('-C', '--community', help='SNMP Community', default='public')
 	argp.add_argument('-H', '--host', help='Hostname or network address to check', required=True)
 	argp.add_argument('-t', '--timeout', help='Check timeout', type=int, default=30)
@@ -204,6 +206,24 @@ def main():
 	argp.add_argument('--rate', help='check radio rate for fixed MBit value. Possible values 1000, 700, 500, 300, 100', type=int, default=1000, choices=[100, 300, 500, 700, 1000])
 	args = argp.parse_args()
 
+	device_defaults = dict(
+		modem_temp_min_warn=-30, modem_temp_max_warn=65, modem_temp_min_crit=-40, modem_temp_max_crit=85,
+		rx_power_min_warn=-55, rx_power_min_crit=-60,
+		vect_err_min_warn=-20, vect_err_min_crit=-40,
+		link_loss_min_warn=-20, link_loss_min_crit=-40,
+   )
+	config_defaults = { 'general': {}, args.host: device_defaults }
+
+	config_parser = configparser.SafeConfigParser(config_defaults)
+	config_parser.read(args.config)
+
+	if args.host not in config_parser.sections():
+		config_parser.add_section(args.host)
+
+	for key, value in device_defaults.items():
+		if not config_parser.has_option(args.host, key):
+			config_parser.set(args.host, key, str(value))
+
 	check = nagiosplugin.Check(Sub10g(args))
 	check.add(SNMPContext('reachable'))
 	check.add(BoolContextWarning('ntp_sync', warn_text="NTP is not in sync"))
@@ -212,14 +232,21 @@ def main():
 	if args.modulation is not None:
 		check.add(BoolContextWarning('modulation', warn_text="Modulation is not forced modulation %s" % args.modulation))
 
-	# FIXME: add configfile to override default ranges
-	check.add(nagiosplugin.ScalarContext('modem_temp', warning='-30:65', critical='-40:85'))
+	check.add(nagiosplugin.ScalarContext('modem_temp',
+										 warning='%i:%i' % (config_parser.getint(args.host, 'modem_temp_min_warn'), config_parser.getint(args.host, 'modem_temp_max_warn')),
+										 critical='%i:%i' % (config_parser.getint(args.host, 'modem_temp_min_crit'), config_parser.getint(args.host, 'modem_temp_max_crit'))))
 
 	check.add(nagiosplugin.ScalarContext('tx_power'))
-	check.add(nagiosplugin.ScalarContext('rx_power', warning='-55:0', critical='-60:0'))
+	check.add(nagiosplugin.ScalarContext('rx_power',
+										 warning='%i:0' % (config_parser.getint(args.host, 'rx_power_min_warn')),
+										 critical='%i:0' % (config_parser.getint(args.host, 'rx_power_min_crit'))))
 
-	check.add(nagiosplugin.ScalarContext('vect_err', warning='-20:0', critical='-25:0'))
-	check.add(nagiosplugin.ScalarContext('link_loss', warning='-20:0', critical='-40:0'))
+	check.add(nagiosplugin.ScalarContext('vect_err',
+										 warning='%i:0' % (config_parser.getint(args.host, 'vect_err_min_warn')),
+										 critical='%i:0' % (config_parser.getint(args.host, 'vect_err_min_crit'))))
+	check.add(nagiosplugin.ScalarContext('link_loss',
+										 warning='%i:0' % (config_parser.getint(args.host, 'link_loss_min_warn')),
+										 critical='%i:0' % (config_parser.getint(args.host, 'link_loss_min_crit'))))
 	check.add(nagiosplugin.ScalarContext('data_rate', warning='%i:%i' % (args.rate, args.rate)))
 	check.add(nagiosplugin.ScalarContext('sysuptime', warning='@%i:%i' % (0, args.uptime)))
 
