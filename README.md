@@ -1,6 +1,6 @@
 ## Nagios Check for Sub10 Systems Liberator Devices
 
-This Nagios/Icinga Check provides the ability to query Sub10 Systems Liberator devices for status and parameters. It will output performance data to monitor reception quality and errors for tools like pnp4nagios. A event handler script for Rebooting a device is also provided.
+This Nagios/Icinga Check provides the ability to query Sub10 Systems Liberator (now Fastback networks Liberator E1000e or V1000) devices for status and parameters. It will output performance data to monitor reception quality and errors for tools like pnp4nagios. A event handler script for Rebooting a device is also provided.
 Implementation is in Python. You will need Python libraries pnp4nagios and pysnmp as dependencies.
 
 You need to enable the SNMP Agent on the Sub10 device and set a SNMP Read community. For using the reboot script, you need to also set the SNMP write community.
