@@ -11,4 +11,4 @@ setup(name='check_sub10',
 	license='GPL',
 	packages=['sub10_snmp'],
 	scripts=['check_sub10', 'reboot_sub10'],
-	install_requires=['nagiosplugin', 'pysnmp'])
+	install_requires=['configparser', 'nagiosplugin', 'pysnmp'])
