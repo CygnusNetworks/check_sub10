@@ -1,6 +1,6 @@
-## Nagios Check for Sub10 Systems Liberator Devices
+## Fastback E/V Band Devices Nagios Check
 
-This Nagios/Icinga Check provides the ability to query Sub10 Systems Liberator (now Fastback networks Liberator E1000e or V1000) devices for status and parameters. It will output performance data to monitor reception quality and errors for tools like pnp4nagios. A event handler script for Rebooting a device is also provided.
+This Nagios/Icinga Check provides the ability to query Fastback E and V-Band devices (former Sub10 Liberator E1000e or V1000) for status and parameters. It will output performance data to monitor reception quality and errors for tools like pnp4nagios. A event handler script for Rebooting a device is also provided.
 Implementation is in Python. You will need Python libraries pnp4nagios and pysnmp as dependencies.
 
 You need to enable the SNMP Agent on the Sub10 device and set a SNMP Read community. For using the reboot script, you need to also set the SNMP write community.
@@ -15,7 +15,7 @@ ln -s reboot_sub10 /usr/share/nagios3/plugins/eventhandlers/reboot_sub10
 
 ### Installation Debian package
 
-For Debian you can use the provided Debian package. For Debian Wheezy you will need python-configparser from Backports. Debian Jessie should be fine without any additional packages.
+For Debian you can use the provided Debian package. Debian Jessie should be fine without any additional packages. For Debian Wheezy you will need python-configparser from Backports.
 
 
 ### Usage example
@@ -69,7 +69,7 @@ define command {
 	command_line	/usr/lib/nagios/plugins/check_sub10 -C $ARG1$ -H $HOSTADDRESS$
 }
 define service {
-	use					generic-service-perfdata
+	use			generic-service-perfdata
 	hostgroup_name		sub10g
 	service_description	check_sub10
 	check_command		check_sub10!SNMP_COMMUNITY
@@ -84,11 +84,11 @@ define command {
 	command_line	/usr/share/nagios3/plugins/eventhandlers/reboot_sub10 -H FIXME -C private $HOSTSTATE$ $HOSTSTATETYPE$ $HOSTATTEMPT$
 }
 define host{
-	use						generic-host
-	host_name				some-child-host
-	parents					sub10-device
-	address					FIXME
-	event_handler_enabled	1
+	use				generic-host
+	host_name			some-child-host
+	parents				sub10-device
+	address				FIXME
+	event_handler_enabled		1
 	event_handler			reboot_sub10_sub10-device
 }
 
