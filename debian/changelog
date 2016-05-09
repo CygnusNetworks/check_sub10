@@ -1,3 +1,9 @@
+check-sub10 (0.21+debian1) UNRELEASED; urgency=low
+
+  * Fix support for newer firmware, now using system description Liberator
+
+ -- Dr. Torge Szczepanek <debian@cygnusnetworks.de>  Mon, 09 May 2016 12:34:14 +0200
+
 check-sub10 (0.20+debian1) UNRELEASED; urgency=low
 
   * Add config file support

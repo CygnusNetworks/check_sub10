@@ -71,8 +71,8 @@ class Sub10g(nagiosplugin.Resource):  # pylint: disable=too-few-public-methods
 		yield nagiosplugin.Metric('reachable', dict(status=True))
 		_log.debug("Found Sysname %s and sysdescr %s", self.snmpclient.sysname, self.snmpclient.sysdescr)
 
-		if not str(self.snmpclient.sysdescr).startswith("Sub10 Systems - "):
-			raise nagiosplugin.CheckError("Device is not a Sub10 Systems device - System description is %s", self.snmpclient.sysdescr)
+		if not (str(self.snmpclient.sysdescr).startswith("Sub10 Systems - ") or str(self.snmpclient.sysdescr).startswith("Liberator ")):
+			raise nagiosplugin.CheckError("Device is not a Fastback Liberator/Sub10 Systems device - System description is %s", self.snmpclient.sysdescr)
 
 		_log.debug("Starting SNMP polling of host %s", self.args.host)
 
