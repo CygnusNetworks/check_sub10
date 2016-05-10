@@ -1,7 +1,7 @@
 ## Fastback E/V Band Devices Nagios Check
 
 This Nagios/Icinga Check provides the ability to query Fastback E and V-Band devices (former Sub10 Liberator E1000e or V1000) for status and parameters. It will output performance data to monitor reception quality and errors for tools like pnp4nagios. A event handler script for Rebooting a device is also provided.
-Implementation is in Python. You will need Python libraries pnp4nagios and pysnmp as dependencies.
+Implementation is in Python. You will need Python libraries nagiosplugin and pysnmp as dependencies.
 
 You need to enable the SNMP Agent on the Sub10 device and set a SNMP Read community. For using the reboot script, you need to also set the SNMP write community.
 
