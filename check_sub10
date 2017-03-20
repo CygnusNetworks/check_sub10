@@ -76,9 +76,19 @@ class Sub10g(nagiosplugin.Resource):  # pylint: disable=too-few-public-methods
 
 		_log.debug("Starting SNMP polling of host %s", self.args.host)
 
-		sysuptime = self.snmpclient.get("SNMPv2-MIB::sysUpTime.0")
+		try:
+			timeout_old = self.snmpclient.timeout
+			retries_old = self.snmpclient.retries
+			self.snmpclient.timeout = 1
+			self.snmpclient.retries = 1
+			sysuptime = self.snmpclient.get("SNMPv2-MIB::sysUpTime.0")
+			uptime = sysuptime.get_value() / 100 / 60
+		except sub10_snmp.snmpclient.SnmpError:
+			uptime = 2**31 - 1 / 100 / 60
 
-		yield nagiosplugin.Metric("sysuptime", int(sysuptime.get_value() / 100 / 60))
+		yield nagiosplugin.Metric("sysuptime", int(uptime))
+		self.snmpclient.timeout = timeout_old
+		self.snmpclient.retries = retries_old
 
 		data_unit_varbinds = self.snmpclient.gettable("SUB10SYSTEMS-MIB::sub10Unit")
 		data_unit = data_unit_varbinds.get_json_name()
