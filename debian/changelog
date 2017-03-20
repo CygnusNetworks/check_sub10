@@ -1,3 +1,9 @@
+check-sub10 (0.22+debian1) UNRELEASED; urgency=low
+
+  * Fix support uptimes higher than signed int32 max values
+
+ -- Dr. Torge Szczepanek <debian@cygnusnetworks.de>  Mon, 20 Mar 2017 15:16:32 +0100
+
 check-sub10 (0.21+debian1) UNRELEASED; urgency=low
 
   * Fix support for newer firmware, now using system description Liberator
