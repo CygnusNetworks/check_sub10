@@ -40,6 +40,7 @@ def main():
 	argp.add_argument('-s', '--snmp-timeout', help='SNMP timeout', dest='snmp_timeout', type=int, default=1)
 	argp.add_argument('-r', '--retries', help='SNMP retries', type=int, default=1)
 	argp.add_argument('-H', '--host', help='Hostname or network address to check', required=True)
+	argp.add_argument('-t', '--statetype', help='Host state type in which reset is executed', default='SOFT', choices=["HARD", "SOFT"])
 	argp.add_argument('hoststate', nargs=1, help='Nagios host state')
 	argp.add_argument('hoststatetype', nargs=1, help='Nagios host state type')
 	argp.add_argument('hostattempt', nargs=1, help='Nagios host attempt')
@@ -57,15 +58,16 @@ def main():
 	hoststate = args.hoststate[0]
 	hoststatetype = args.hoststatetype[0]
 	# hostattempt = args.hostattempt[0]
+	_log.debug("sub10 device %s nagios state is %s and statetype is %s", args.host, hoststate, hoststatetype)
 
-	if hoststate == "DOWN" and hoststatetype == "HARD":
-		_log.info("sub10 device %s executing reset through sub10UnitMgmtFirmwareAction", args.host)
+	if hoststate == "DOWN" and hoststatetype == args.statetype:
+		_log.debug("sub10 device %s executing reset through sub10UnitMgmtFirmwareAction", args.host)
 		# device does not return any value but reboots immediately
 		try:
 			snmpclient.set(('SUB10SYSTEMS-MIB::sub10UnitMgmtFirmwareAction.0', rfc1902.Integer(2)))
-		except:  # pylint:disable=bare-except
-			pass
-		_log.info("sub10 device %s reset done", args.host)
+		except Exception as e:  # pylint:disable=bare-except
+			_log.debug("sub10 device %s reset failed to exception %s", args.host, str(e))
+		_log.debug("sub10 device %s reset done", args.host)
 	else:
 		_log.debug("Device state is %s and statetype %s - not executing reset", hoststate, hoststatetype)
 
