@@ -4,7 +4,7 @@
 from setuptools import setup
 
 setup(name='check_sub10',
-	version='0.23',
+	version='0.24',
 	description='Nagios Check for sub10 Systems Liberator E1000 ',
 	author='Dr. Torge Szczepanek',
 	author_email='info@cygnusnetworks.de',

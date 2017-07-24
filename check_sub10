@@ -124,6 +124,11 @@ class Sub10g(nagiosplugin.Resource):  # pylint: disable=too-few-public-methods
 			radio_data_rate = data_unit["SUB10SYSTEMS-MIB::sub10UnitLclRadioDataRate.0"]  # 0 = GBit, 1 = 700 MBit, 2= 500 MBit, 3= 300 Mbit, 4=100 Mbit
 			_log.debug("Device %s radio data rate is %s", self.args.host, radio_data_rate)
 
+		data_eth_varbinds = self.snmpclient.gettable("SUB10SYSTEMS-MIB::sub10EthLclLinkStatus")
+		data_eth = data_eth_varbinds.get_json_name()
+		eth_speed = int(data_eth["SUB10SYSTEMS-MIB::sub10EthLclLinkStatus.1.3.1"]) / 1000 / 1000
+		yield nagiosplugin.Metric('eth_speed', eth_speed)
+
 		data_mgt_varbinds = self.snmpclient.gettable("SUB10SYSTEMS-MIB::sub10UnitMgmt")
 		data_mgt = data_mgt_varbinds.get_json_name()
 
@@ -214,6 +219,7 @@ def main():
 	argp.add_argument('-u', '--uptime', help='Update limit in minutes to create warning', type=int, default=120)
 	argp.add_argument('-m', '--modulation', help='Force checking of modulation', default=None, choices=["qpsk", "8psk"])
 	argp.add_argument('--rate', help='check radio rate for fixed MBit value. Possible values 1000, 700, 500, 300, 100', type=int, default=1000, choices=[100, 300, 500, 700, 1000])
+	argp.add_argument('--eth-speed', help='check ethernet speed for fixed MBit value. Possible values 1000, 100 or 10', type=int, default=1000, choices=[10, 100,1000])
 	args = argp.parse_args()
 
 	device_defaults = dict(
@@ -258,6 +264,7 @@ def main():
 										 warning='%i:0' % (config_parser.getint(args.host, 'link_loss_min_warn')),
 										 critical='%i:0' % (config_parser.getint(args.host, 'link_loss_min_crit'))))
 	check.add(nagiosplugin.ScalarContext('data_rate', warning='%i:%i' % (args.rate, args.rate)))
+	check.add(nagiosplugin.ScalarContext('eth_speed', warning='%i:%i' % (args.eth_speed, args.eth_speed)))
 	check.add(nagiosplugin.ScalarContext('sysuptime', warning='@%i:%i' % (0, args.uptime)))
 
 	check.main(args.verbose, timeout=args.timeout)

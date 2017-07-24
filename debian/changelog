@@ -1,3 +1,9 @@
+check-sub10 (0.24+debian1) UNRELEASED; urgency=low
+
+  * Add ethernet speed check
+
+ -- Dr. Torge Szczepanek <debian@cygnusnetworks.de>  Mon, 24 Jul 2017 13:03:50 +0200
+
 check-sub10 (0.23+debian1) UNRELEASED; urgency=low
 
   * Add reboot handler to support state SOFT and HARD
