@@ -1,3 +1,6 @@
+> [\!WARNING]
+> **This project is archived and no longer maintained.** It is no longer in use within our team. No further development, bug fixes, or support will be provided. Feel free to fork if you need to continue development.
+
 ## Fastback E/V Band Devices Nagios Check
 
 This Nagios/Icinga Check provides the ability to query Fastback E and V-Band devices (former Sub10 Liberator E1000e or V1000) for status and parameters. It will output performance data to monitor reception quality and errors for tools like pnp4nagios. A event handler script for Rebooting a device is also provided.
@@ -81,8 +84,7 @@ To use the event handler script to reboot a Sub10 device, define the reboot comm
 ```
 define command {
 	command_name	reboot_sub10_sub10-device
-	command_line	/usr/share/nagios3/plugins/eventhandlers/reboot_sub10 -H FIXME -C private $HOSTSTATE$ $HOSTSTATETYPE$ $HOSTATTEMPT$
-}
+	command_line	/usr/share/nagios3/plugins/eventhandlers/reboot_sub10 -H FIXME -C private $HOSTSTATE$ $HOSTSTATETYPE$ $HOSTATTEMPT$ý
 define host{
 	use				generic-host
 	host_name			some-child-host
